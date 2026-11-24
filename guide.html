@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>课表转日历 · 使用说明</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1f2328; --muted: #5b6472;
+    --line: #e2e6eb; --accent: #2f5d8a; --accent-soft: #eaf1f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181c; --card: #1d2127; --ink: #e6e9ee; --muted: #9aa4b2;
+      --line: #2c323a; --accent: #7aa7d4; --accent-soft: #1f2a36;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.75 -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
+  .back { display: inline-block; margin-bottom: 18px; color: var(--accent); text-decoration: none; font-size: 14px; }
+  .back:hover { text-decoration: underline; }
+  .doc {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 8px 26px 26px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  h1 { font-size: 26px; line-height: 1.35; margin: 26px 0 6px; }
+  h1 + p { color: var(--muted); margin-top: 0; }
+  h2 { font-size: 19px; margin: 34px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 22px 0 8px; }
+  p, li { color: var(--ink); }
+  a { color: var(--accent); }
+  code {
+    background: var(--accent-soft); border-radius: 5px; padding: 1px 5px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px;
+  }
+  pre {
+    background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); font-weight: 600; }
+  blockquote { margin: 12px 0; padding: 2px 14px; border-left: 3px solid var(--line); color: var(--muted); }
+  hr { border: none; border-top: 1px solid var(--line); margin: 30px 0; }
+  strong { font-weight: 600; }
+  @media (max-width: 520px) {
+    main { padding: 16px 12px 60px; }
+    .doc { padding: 4px 16px 20px; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← 回到课表转日历</a>
+  <div class="doc">
+<h1>课表转日历 · 使用说明</h1>
+<p>把学校教务系统里的课表，变成手机日历里能提醒的日程。</p>
+<p>网页地址：https://bryce-bin.github.io/course-to-calendar/</p>
+<hr>
+<h2>一、这是什么</h2>
+<p>一个网页。你把课表交给它，它给你一个 <code>.ics</code> 文件；把文件导进手机日历，之后每次上课前手机会自己响。</p>
+<p>它<strong>不会</strong>做的事，比它会做的更重要：</p>
+<table>
+<thead>
+<tr>
+<th>不会</th>
+<th>所以</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>不上传你的课表</td>
+<td>所有解析都在你自己的浏览器里跑，文件不出这台电脑</td>
+</tr>
+<tr>
+<td>不用注册、不用登录</td>
+<td>打开就能用</td>
+</tr>
+<tr>
+<td>不联网也能用</td>
+<td>页面和解析库都在本地，断网照常工作（第一次打开要联网加载页面）</td>
+</tr>
+<tr>
+<td>不替你连教务系统</td>
+<td>不需要你的学号密码，也不该给任何网站</td>
+</tr>
+</tbody>
+</table>
+<p>它会做的事：</p>
+<ul>
+<li>认教务系统导出的 <code>.xls</code> / <code>.xlsx</code> 表格，也认你手动粘贴的文字</li>
+<li>算出每门课在 calendar 上的具体日期和时间（第几周、周几、第几节 → 几点到几点）</li>
+<li>生成标准 <code>.ics</code>，iPhone、安卓、Google 日历、Outlook、Mac 日历都认</li>
+<li>支持单双周、不连续的周次、跨中午的连堂课</li>
+</ul>
+<hr>
+<h2>二、开始之前：先确认一件事</h2>
+<p><strong>本学期第 1 周的周一是哪一天。</strong></p>
+<p>这是唯一必须你自己提供的信息，因为课表上只写「第 3 周周三」，不写具体日期。</p>
+<p>不确定的话，三个办法：</p>
+<ol>
+<li>教务系统首页通常有「校历」，上面标着第 1 周；</li>
+<li>问班长或辅导员；</li>
+<li>翻你第一节专业课的日期，往前推到那一周的周一。</li>
+</ol>
+<p>填错会怎样：所有课整体平移，时间和真课对不上。所以宁可多问一句。</p>
+<p>页面上的「用本周一」按钮只是方便，它会按<strong>今天所在的这一周</strong>填，开学前用一定要改。</p>
+<hr>
+<h2>三、把课表弄进来（三种方式，任选）</h2>
+<h3>方式 A：拖教务系统导出的表格（最省事）</h3>
+<ol>
+<li>在教务系统的课表页面，找「导出」「打印」「下载」之类的按钮，存下 <code>.xls</code> 或 <code>.xlsx</code>；</li>
+<li>打开网页，把文件<strong>直接拖到第 2 步的虚线框里</strong>（或者点「选择文件」）；</li>
+<li>页面上会出现「识别 39 门，新增 39 门」这样的提示。</li>
+</ol>
+<p>解析库有 880KB，第一次拖文件时会加载一下，之后就有缓存了。</p>
+<p>它认的表格长这样：</p>
+<ul>
+<li>某一行写着「星期一 星期二 … 星期日」——用它定位每一列是周几；</li>
+<li>往下每一行是一个「大节」（上午一大节、下午二大节…）；</li>
+<li>每一格里写着一门课，形如：</li>
+</ul>
+<p><code>思想道德与法治[32][必修]◇焦亚静◇26电气[4-6]班(97)◇17([周])[01-02节]◇A主104</code></p>
+<p>拆开就是 <code>课程名[学分][类型]◇老师◇班级◇周次([周])[节次]◇地点</code>。</p>
+<p>周次这栏能认：<code>17</code>、<code>2-3,8-16</code>、<code>1-15周(单)</code>。格子里没写节次时，按它所在那行的「上午一大节 / 下午二大节」推算。</p>
+<p><strong>如果你的学校导出的表格长得不一样</strong>，页面会把认不出的格子列出来（黄色的错误框），不会悄悄吞掉。把那份表发给我，我加一种格式就行。</p>
+<h3>方式 B：复制粘贴（学校没有导出按钮时）</h3>
+<ol>
+<li>教务系统课表页，鼠标从左上角拖到右下角，<code>Ctrl+C</code>；</li>
+<li>粘到网页第 2 步的文本框里；</li>
+<li>点「解析并添加」。</li>
+</ol>
+<p>格式不对也没关系，它宽容得很——一行一门课，字段用 <code>|</code>、逗号、Tab 或两个空格隔开都行：</p>
+<p><code>高等数学 | 周一 1-2节 | 1-16周 | 教三-201 | 张老师
+大学英语 周三 3-4节 2-17周 外语楼302 李老师
+线性代数 | 周二 5-6节 | 1-15周(单) | 教二101</code></p>
+<p>几种常见写法它都懂：</p>
+<table>
+<thead>
+<tr>
+<th>你写的</th>
+<th>它的理解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>周一</code> <code>星期一</code> <code>礼拜一</code> <code>周1</code></td>
+<td>周一</td>
+</tr>
+<tr>
+<td><code>周一/周三</code> <code>周一、周三</code></td>
+<td>这一门课一周上两天</td>
+</tr>
+<tr>
+<td><code>1-16周</code> <code>第1-16周</code></td>
+<td>第 1 到 16 周，每周都有</td>
+</tr>
+<tr>
+<td><code>1-15周(单)</code></td>
+<td>第 1、3、5…15 周</td>
+</tr>
+<tr>
+<td><code>2-16周(双)</code></td>
+<td>第 2、4、6…16 周</td>
+</tr>
+<tr>
+<td><code>1-5,8-12周</code></td>
+<td>不连续的周次</td>
+</tr>
+<tr>
+<td><code>1-2节</code> <code>第1-2节</code> <code>3,4节</code> <code>9节</code></td>
+<td>起止节次</td>
+</tr>
+<tr>
+<td>不写周次</td>
+<td>默认按 1-18 周，并在课程后面标出来</td>
+</tr>
+</tbody>
+</table>
+<p>认不出的行会进黄色错误框，写着「第 3 行：没找到星期」。按提示补一下再粘一次就行，已经加进去的课不会重复（见下面去重）。</p>
+<h3>方式 C：一门一门手动加</h3>
+<p>课少、或者只补一门的时候用。填课程名、周几、第几节到第几节、第几周到第几周，点「添加」。</p>
+<p>三种方式可以混着用：先拖表格，再手动补一门没进的。</p>
+<hr>
+<h2>四、检查一遍再导出</h2>
+<p>三件事值得看一眼：</p>
+<p><strong>1. 课程列表</strong></p>
+<p>每行显示「周三 第3-4节 · 第1-16周 · 教三-201」。数字对不对，尤其是周次。</p>
+<p><strong>2. 黄色的错误框</strong></p>
+<p>说明有东西没认出来。点它可以看原文——通常是把老师名当成了课程名，或者节次写成了「第三四节」这种中文数字。</p>
+<p><strong>3. 节次时间表</strong></p>
+<p>页面下半部分列着第 1 节到第 12 节的起止时间。<strong>每所学校不一样</strong>，务必按你们学校的作息改一遍，否则导出来的时间会整体偏移。</p>
+<p>如果你们有第 13 节（很多学校晚上排到 12 节以后），在时间表里加一行，填上起止时间即可。</p>
+<hr>
+<h2>五、导出并导入手机</h2>
+<h3>导出</h3>
+<p>填好第 1 周周一 → 点「下载 .ics」，会得到一个 <code>课表.ics</code> 文件。</p>
+<p>页面上还有一个「预览」可以展开，看看前 40 行长什么样，确认内容对。</p>
+<h3>导入</h3>
+<p><strong>iPhone / iPad</strong></p>
+<ol>
+<li>把 <code>.ics</code> 发到微信「文件传输助手」，在手机上点开；</li>
+<li>选「添加到日历」；</li>
+<li>会问加到哪个日历——<strong>新建一个叫「课表」的日历</strong>，别加进默认日历。</li>
+</ol>
+<p><strong>安卓</strong></p>
+<ol>
+<li>把文件发到手机，用文件管理器点开；</li>
+<li>系统会问用哪个日历打开，选系统日历或 Google 日历；</li>
+<li>有的机型需要先「导入」：日历 App → 设置 → 导入/导出 → 从存储导入。</li>
+</ol>
+<p><strong>电脑</strong></p>
+<ul>
+<li><strong>Google 日历</strong>：设置 → 导入和导出 → 选择文件 → 选一个日历（建议新建「课表」）→ 导入；</li>
+<li><strong>Outlook</strong>：文件 → 打开和导出 → 导入/导出 → 从 iCalendar (.ics) 导入；</li>
+<li><strong>Mac 日历</strong>：直接双击 <code>.ics</code> 文件。</li>
+</ul>
+<h3>为什么要新建一个「课表」日历</h3>
+<ul>
+<li>这学期结束了，删整个日历就行，不用一门一门删；</li>
+<li>颜色可以和别的日程区分开；</li>
+<li>课表变了重新导入，只影响这一个日历。</li>
+</ul>
+<h3>提醒</h3>
+<p>页面上的「课前提醒」选几分钟，就会在每节课前那么久响。不想要提醒就选「不提醒」。</p>
+<hr>
+<h2>六、常见问题</h2>
+<p><strong>导入后时间差了 8 小时？</strong></p>
+<p>不应该发生——文件里明确写了 <code>TZID=Asia/Shanghai</code>，不依赖你设备的时区猜测。如果真遇到了，先看这是不是别的软件（比如某些网页日历预览）的显示问题；把文件用系统日历打开一般是准的。</p>
+<p><strong>导了两次，课变成两门了？</strong></p>
+<p>同一个文件导两次，大部分日历会按事件 ID 去重，不会重复。但如果你<strong>导进了两个不同的日历</strong>，那就会看到两遍——删掉其中一个日历即可。</p>
+<p><strong>学期中途调课、停课怎么办？</strong></p>
+<p>改完课表重新导出、重新导入同一个日历。新文件里的事件 ID 是稳定的（同样的课还是同一个 ID），日历会覆盖更新，不会翻倍。停课的那一周，把周次改掉再导。</p>
+<p><strong>国庆、清明这种假期呢？</strong></p>
+<p><strong>没有自动处理。</strong> 这是目前最大的限制：假期那一周如果课表上仍然排了课，日历里也会显示。要么在日历里手动删掉那几个事件，要么忽略它。</p>
+<p><strong>第 13 节 / 晚上的课没导出？</strong></p>
+<p>页面在下载时会点名告诉你「这些课节次超出时间表」。去「节次时间」里加一行，再导一次。</p>
+<p><strong>我的教务系统格式跟说明里不一样？</strong></p>
+<p>把导出的文件（或者截图）发给我，加一种格式很快。</p>
+<p><strong>能不能发链接给同学？</strong></p>
+<p>可以，直接把网页地址发过去。他们每个人的第 1 周周一可能不同，自己填自己的。</p>
+<p><strong>数据存在哪？换台电脑还在吗？</strong></p>
+<p>存在你浏览器的 localStorage 里，只在这台设备这个浏览器里。换电脑、清浏览器数据就没了——但没关系，重新拖一次课表就行（所以别把这个页面当存档用）。</p>
+<p><strong>能不能只在线看，不导入日历？</strong></p>
+<p>不能，这个页面的产物就是 <code>.ics</code> 文件。想在网页上看课表，用学校的教务系统更合适。</p>
+<hr>
+<h2>七、已知限制</h2>
+<ul>
+<li><strong>只处理一个学期</strong>。下学期重新来一遍。</li>
+<li><strong>不处理节假日调休</strong>，也不会自动跳过停课周。</li>
+<li><strong>一节课只有一个时间段</strong>。同一门课如果一周里时间不同（比如单周上午、双周下午），要拆成两条。</li>
+<li><strong>不认中文数字节次</strong>（如「第三四节」），请写 <code>3-4节</code>。</li>
+<li><strong>没有订阅链接</strong>。<code>.ics</code> 是一次性快照，课表改了要重新导——因为这是纯前端页面，没有服务器。</li>
+<li>课表上写「第 1-16 周」但你第 17 周才想起来用：已过去的课仍会生成事件，导入后在日历里会显示成历史事件，不影响使用。</li>
+</ul>
+<hr>
+<h2>八、隐私</h2>
+<ul>
+<li>不登录、不注册、不收集任何信息。</li>
+<li>你拖进去的文件不会被上传，解析在你自己的浏览器里完成。</li>
+<li>唯一的网络请求是打开页面本身（GitHub Pages 托管）。</li>
+<li>不需要你的教务系统账号密码，也请不要把密码给任何第三方工具。</li>
+</ul>
+  </div>
+</main>
+</body>
+</html>
