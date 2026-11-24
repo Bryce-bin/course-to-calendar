@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>课表转日历</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --ink: #1b2430;
+    --muted: #68727f;
+    --line: #e2e6eb;
+    --accent: #2f5d8a;
+    --accent-soft: #eaf1f8;
+    --danger: #a33;
+    --warn-bg: #fff6e0;
+    --warn-ink: #7a5200;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15181d;
+      --card: #1d2127;
+      --ink: #e6e9ee;
+      --muted: #9aa4b1;
+      --line: #2c323a;
+      --accent: #7aa7d4;
+      --accent-soft: #22303d;
+      --danger: #e08b8b;
+      --warn-bg: #3a2f14;
+      --warn-ink: #f0c96b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.65 -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 18px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: .01em; }
+  h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+  .sub { color: var(--muted); margin: 0; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    margin: 14px 0;
+  }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  input, select, textarea {
+    font: inherit;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+  textarea {
+    resize: vertical;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    font: inherit;
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:disabled { opacity: .45; cursor: not-allowed; }
+  button.big { padding: 12px 22px; font-size: 16px; }
+  button.ghost { background: transparent; }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .hint.bad { color: var(--danger); }
+  .errors {
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+  .errors b { display: block; margin-bottom: 4px; }
+  .errors p { margin: 2px 0; }
+  .item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-top: 1px dashed var(--line);
+  }
+  .item:first-child { border-top: 0; }
+  .name { font-weight: 600; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .del {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 13px;
+  }
+  .del:hover { color: var(--danger); }
+  .badge {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 1px 9px;
+    font-size: 12px;
+    font-weight: 500;
+    vertical-align: 2px;
+  }
+  details { border-top: 1px dashed var(--line); margin-top: 14px; padding-top: 12px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+  .periods {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .periods .p {
+    display: grid;
+    grid-template-columns: 3.2em 1fr 1fr;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .periods .p input { padding: 4px 6px; font-size: 13px; }
+  pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 10px;
+    max-height: 280px;
+    overflow: auto;
+  }
+  footer { color: var(--muted); font-size: 12.5px; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>课表转日历</h1>
+    <p class="sub">把课表变成手机日历里的重复事件，每节课前提醒。不上传、不登录，所有计算都在你的浏览器里完成。</p>
+  </header>
+
+  <section class="card">
+    <h2>1 · 学期</h2>
+    <div class="grid">
+      <label>第 1 周的周一
+        <input type="date" id="termStart">
+      </label>
+      <label>总周数
+        <input type="number" id="totalWeeks" min="1" max="30" value="18">
+      </label>
+      <label>提前提醒
+        <select id="remind">
+          <option value="5">5 分钟</option>
+          <option value="10">10 分钟</option>
+          <option value="15" selected>15 分钟</option>
+          <option value="30">30 分钟</option>
+          <option value="0">不提醒</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <button id="thisMonday" class="ghost" type="button">用本周一</button>
+    </div>
+    <p class="hint" id="termHint"></p>
+  </section>
+
+  <section class="card">
+    <h2>2 · 粘贴课表</h2>
+    <p class="hint">一行一门课，用 <code>|</code> 或空格隔开：课程名 | 周几 节次 | 周次 | 地点 | 老师。支持「1-16周(单)」「周一/周三」「第1-2节」。</p>
+    <textarea id="paste" rows="7" spellcheck="false"
+      placeholder="高等数学 | 周一 1-2节 | 1-16周 | 教三-201 | 张老师&#10;大学英语 | 周三 3-4节 | 2-17周 | 外语楼302 | 李老师&#10;线性代数 | 周二 5-6节 | 1-15周(单) | 教二101"></textarea>
+    <div class="row">
+      <button id="parseBtn" class="primary">解析并添加</button>
+      <button id="sampleBtn" class="ghost">载入示例</button>
+      <button id="clearBtn" class="ghost">清空输入</button>
+    </div>
+    <div id="errors" class="errors" hidden></div>
+  </section>
+
+  <section class="card">
+    <h2>3 · 课程 <span id="count" class="badge"></span></h2>
+    <div id="list"></div>
+    <details>
+      <summary>手动添加一门</summary>
+      <form id="addForm" class="grid" style="margin-top:12px">
+        <label>课程名 <input id="fName" required></label>
+        <label>周几
+          <select id="fDay">
+            <option value="1">周一</option>
+            <option value="2">周二</option>
+            <option value="3">周三</option>
+            <option value="4">周四</option>
+            <option value="5">周五</option>
+            <option value="6">周六</option>
+            <option value="7">周日</option>
+          </select>
+        </label>
+        <label>开始节 <input type="number" id="fStart" min="1" max="12" value="1"></label>
+        <label>结束节 <input type="number" id="fEnd" min="1" max="12" value="2"></label>
+        <label>起始周 <input type="number" id="fW1" min="1" max="30" value="1"></label>
+        <label>结束周 <input type="number" id="fW2" min="1" max="30" value="16"></label>
+        <label>单双周
+          <select id="fParity">
+            <option value="">每周</option>
+            <option value="单">单周</option>
+            <option value="双">双周</option>
+          </select>
+        </label>
+        <label>地点 <input id="fLoc"></label>
+        <label>老师 <input id="fTeacher"></label>
+        <button class="primary" type="submit">添加</button>
+      </form>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>4 · 节次时间</h2>
+    <details>
+      <summary>改成本校作息（默认 12 节）</summary>
+      <div id="periods" class="periods"></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>5 · 导出</h2>
+    <div class="row">
+      <button id="downloadBtn" class="primary big">下载 .ics</button>
+      <button id="copyBtn" class="ghost">复制内容</button>
+    </div>
+    <p class="hint" id="status"></p>
+    <details id="previewWrap">
+      <summary>看看生成的内容</summary>
+      <pre id="preview"></pre>
+    </details>
+  </section>
+
+  <footer>数据只存在这台设备的浏览器里（localStorage）。换台设备，重新粘贴一次就行。</footer>
+</main>
+
+<script src="app.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
