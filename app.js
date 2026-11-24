@@ -212,6 +212,153 @@
     return { courses: courses, errors: errors };
   }
 
+  /* ---------------- 教务系统整表（◇ 格式） ---------------- */
+
+  const EDU_DAY_RE = /^(?:星期|周)\s*([一二三四五六日天])$/;
+  const LABEL_NUM = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6 };
+  const DAY_CHARS = '一二三四五六日';
+
+  /** "思想道德与法治[32][必修]" -> "思想道德与法治" */
+  function stripEduTags(s) {
+    return String(s == null ? '' : s).replace(/(\s*\[[^\]]*\])+\s*$/, '').trim();
+  }
+
+  /** "2-3,8-16" / "17" -> [2,3,...,16]；不认识的部分直接忽略 */
+  function expandWeekList(spec) {
+    const weeks = [];
+    String(spec).split(/[,，、;；]/).forEach(function (part) {
+      const p = part.replace(/[周\s]/g, '').replace(/[^\d,\-~]/g, '').trim();
+      if (!p) return;
+      const m = p.match(/^(\d{1,2})\s*[-~]\s*(\d{1,2})$/);
+      if (m) {
+        for (let w = +m[1]; w <= +m[2]; w++) weeks.push(w);
+      } else if (/^\d{1,2}$/.test(p)) {
+        weeks.push(+p);
+      }
+    });
+    return weeks
+      .filter(function (w, i) { return weeks.indexOf(w) === i; })
+      .sort(function (a, b) { return a - b; });
+  }
+
+  /** 行首的「上午一大节」「下午二大节」-> [1,2] / [7,8] … */
+  function periodsFromLabel(label) {
+    const s = String(label);
+    const m = s.match(/([一二三四五六])\s*大节/);
+    if (!m) return null;
+    const n = LABEL_NUM[m[1]];
+    let base = 0;
+    if (s.indexOf('下午') >= 0) base = 4;
+    else if (s.indexOf('晚上') >= 0) base = 8;
+    return [base + n * 2 - 1, base + n * 2];
+  }
+
+  /** 一个单元格里的一门课：名称[学分][类型]◇老师◇班级◇周次([周])[节次]◇地点 */
+  function parseEduEntry(entry, weekday, fallbackPeriods, opts) {
+    const parts = String(entry).split('◇');
+    if (parts.length < 4) {
+      const r = parseLine(entry + ' ' + WEEKDAY_CN[weekday], opts);
+      if (!r) return { error: '看不懂这一格' };
+      if (r.error) return { error: r.error };
+      return { course: r.course };
+    }
+
+    const name = stripEduTags(parts[0]);
+    const teacher = String(parts[1] || '').replace(/^\s+|\s+$/g, '');
+    const head = String(parts[3] || '');
+    const location = String(parts[4] || '').replace(/^\s+|\s+$/g, '');
+
+    if (!name) return { error: '这一格没有课程名' };
+
+    const weekMatch = head.match(/([\d,，\-、]+)/);
+    let weeks = weekMatch ? expandWeekList(weekMatch[1]) : [];
+    if (/单/.test(head)) weeks = weeks.filter(function (w) { return w % 2 === 1; });
+    if (/双/.test(head)) weeks = weeks.filter(function (w) { return w % 2 === 0; });
+
+    let start = null;
+    let end = null;
+    const pm = head.match(/\[(\d{1,2})(?:\s*[-~]\s*(\d{1,2}))?\s*节\]/);
+    if (pm) {
+      start = +pm[1];
+      end = pm[2] ? +pm[2] : start;
+    } else if (fallbackPeriods) {
+      start = fallbackPeriods[0];
+      end = fallbackPeriods[1];
+    }
+
+    if (!weeks.length) return { error: '这一格没找到周次' };
+    if (start == null) return { error: '这一格没找到节次' };
+
+    return {
+      course: {
+        name: name,
+        weekdays: [weekday],
+        startPeriod: start,
+        endPeriod: end,
+        weeks: weeks,
+        location: location,
+        teacher: teacher,
+        note: ''
+      }
+    };
+  }
+
+  /**
+   * 教务系统导出的二维表（或整页复制出来的文字）-> { courses, errors }
+   * rows 是二维数组：一行一个「大节」，一列一个星期。
+   */
+  function parseSheet(rows, opts) {
+    const options = opts || {};
+    const courses = [];
+    const errors = [];
+    const dayCols = {};
+    let headerRow = -1;
+
+    for (let r = 0; r < rows.length && headerRow < 0; r++) {
+      const row = rows[r] || [];
+      const found = {};
+      for (let c = 0; c < row.length; c++) {
+        const m = String(row[c] == null ? '' : row[c]).trim().match(EDU_DAY_RE);
+        if (m) {
+          const ch = m[1] === '天' ? '日' : m[1];
+          found[c] = DAY_CHARS.indexOf(ch) + 1;
+        }
+      }
+      if (Object.keys(found).length >= 2) {
+        headerRow = r;
+        for (const key in found) dayCols[key] = found[key];
+      }
+    }
+
+    if (headerRow < 0) {
+      return {
+        courses: [],
+        errors: [{ index: 0, text: '', reason: '没找到表头（写着「星期一…星期日」的那一行）' }]
+      };
+    }
+
+    for (let r = headerRow + 1; r < rows.length; r++) {
+      const row = rows[r] || [];
+      // 整行只要带「备注」，就是学校自己写的说明，不是课
+      if (row.some(function (x) { return String(x == null ? '' : x).indexOf('备注') >= 0; })) continue;
+      const fallback = periodsFromLabel(row[0]);
+
+      for (const col in dayCols) {
+        const cell = String(row[col] == null ? '' : row[col]);
+        if (!cell.trim()) continue;
+        cell.split(/\r?\n/).forEach(function (piece) {
+          const entry = piece.trim();
+          if (!entry) return;
+          const r2 = parseEduEntry(entry, dayCols[col], fallback, options);
+          if (r2.error) errors.push({ index: r + 1, text: entry, reason: r2.error });
+          else courses.push(r2.course);
+        });
+      }
+    }
+
+    return { courses: courses, errors: errors };
+  }
+
   /* ---------------- 日期 ---------------- */
 
   /** 第 week 周、星期 weekday（1=周一）对应的日期（本地时区） */
@@ -418,6 +565,8 @@
     normalize: normalize,
     parseLine: parseLine,
     parsePaste: parsePaste,
+    parseSheet: parseSheet,
+    expandWeekList: expandWeekList,
     weeksFromRange: weeksFromRange,
     weekToDate: weekToDate,
     formatWeeks: formatWeeks,

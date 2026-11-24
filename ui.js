@@ -217,11 +217,10 @@
     $('preview').textContent = build().split('\r\n').slice(0, 40).join('\n') + '\n…';
   }
 
-  function parse() {
-    const result = C.parsePaste($('paste').value, { totalWeeks: state.totalWeeks });
+  /** 合并进列表（按 名称+节次+星期+周次 去重），返回新增数量 */
+  function addCourses(courses) {
     let added = 0;
-
-    result.courses.forEach(function (c) {
+    courses.forEach(function (c) {
       const dup = state.courses.some(function (x) {
         return x.name === c.name &&
           x.startPeriod === c.startPeriod &&
@@ -234,15 +233,64 @@
         added++;
       }
     });
-
     save();
     renderList();
-    renderErrors(result.errors);
     refreshPreview();
+    return added;
+  }
+
+  function parse() {
+    const result = C.parsePaste($('paste').value, { totalWeeks: state.totalWeeks });
+    const added = addCourses(result.courses);
+    renderErrors(result.errors);
 
     const msg = ['识别 ' + result.courses.length + ' 门', added ? '新增 ' + added + ' 门' : '（都已在列表里）'];
     if (result.errors.length) msg.push(result.errors.length + ' 行没看懂');
     $('status').textContent = msg.join('，');
+  }
+
+  /* ---------------- 拖 .xls：按需加载解析库 ---------------- */
+
+  let xlsxLoading = null;
+
+  function loadXlsx() {
+    if (xlsxLoading) return xlsxLoading;
+    xlsxLoading = new Promise(function (resolve, reject) {
+      if (window.XLSX) return resolve(window.XLSX);
+      const s = document.createElement('script');
+      s.src = 'xlsx.full.min.js';
+      s.onload = function () {
+        if (window.XLSX) resolve(window.XLSX);
+        else reject(new Error('解析库没有正常载入'));
+      };
+      s.onerror = function () { reject(new Error('解析库没载入（离线时请先联网打开一次）')); };
+      document.head.appendChild(s);
+    });
+    return xlsxLoading;
+  }
+
+  function importFile(file) {
+    if (!file) return;
+    $('status').textContent = '正在读 ' + file.name + ' …';
+    loadXlsx()
+      .then(function (XLSX) {
+        return file.arrayBuffer().then(function (buf) {
+          const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+          return C.parseSheet(rows, { totalWeeks: state.totalWeeks });
+        });
+      })
+      .then(function (result) {
+        const added = addCourses(result.courses);
+        renderErrors(result.errors);
+        $('status').textContent = file.name + '：识别 ' + result.courses.length + ' 门' +
+          (added ? '，新增 ' + added + ' 门' : '（都已在列表里）') +
+          (result.errors.length ? '，' + result.errors.length + ' 格没看懂' : '') + '。记得在上面填第 1 周的周一。';
+      })
+      .catch(function (e) {
+        $('status').textContent = '没读成：' + e.message;
+      });
   }
 
   /* ---------------- 绑定 ---------------- */
@@ -274,6 +322,28 @@
     state.remind = Number(this.value);
     save();
     refreshPreview();
+  });
+
+  const dropZone = $('dropZone');
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.add('over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('over');
+    });
+  });
+  dropZone.addEventListener('drop', function (e) {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) importFile(f);
+  });
+  $('fileInput').addEventListener('change', function () {
+    importFile(this.files && this.files[0]);
+    this.value = '';
   });
 
   $('parseBtn').addEventListener('click', parse);
@@ -337,8 +407,18 @@
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
 
-    $('status').textContent = '已生成 ' + C.countEvents(state.courses) +
-      ' 节课。导入日历后，课前 ' + (state.remind ? state.remind + ' 分钟' : '（不提醒）') + '会响。';
+    const skipped = state.courses.filter(function (c) {
+      return c.startPeriod > state.periods.length || c.endPeriod > state.periods.length;
+    });
+    const usable = state.courses.filter(function (c) {
+      return c.startPeriod <= state.periods.length && c.endPeriod <= state.periods.length;
+    });
+    $('status').textContent = '已生成 ' + C.countEvents(usable) +
+      ' 节课。导入日历后，课前 ' + (state.remind ? state.remind + ' 分钟' : '（不提醒）') + '会响。' +
+      (skipped.length
+        ? '注意：' + skipped.map(function (c) { return c.name; }).join('、') +
+          ' 的节次超出下面的时间表（第 ' + skipped[0].startPeriod + ' 节），这些课没有导出。'
+        : '');
     refreshPreview();
   });
 
