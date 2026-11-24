@@ -47,6 +47,8 @@
   th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
   th { background: var(--accent-soft); font-weight: 600; }
   blockquote { margin: 12px 0; padding: 2px 14px; border-left: 3px solid var(--line); color: var(--muted); }
+  .credit { text-align: center; color: var(--muted); font-size: 13px; margin-top: 18px; }
+  .credit a { color: var(--accent); text-decoration: none; }
   hr { border: none; border-top: 1px solid var(--line); margin: 30px 0; }
   strong { font-weight: 600; }
   @media (max-width: 520px) {
@@ -61,8 +63,8 @@
   <a class="back" href="./">← 回到课表转日历</a>
   <div class="doc">
 <h1>课表转日历 · 使用说明</h1>
+<p>作者：<strong>Bryce</strong> · 网页：https://bryce-bin.github.io/course-to-calendar/</p>
 <p>把学校教务系统里的课表，变成手机日历里能提醒的日程。</p>
-<p>网页地址：https://bryce-bin.github.io/course-to-calendar/</p>
 <hr>
 <h2>一、这是什么</h2>
 <p>一个网页。你把课表交给它，它给你一个 <code>.ics</code> 文件；把文件导进手机日历，之后每次上课前手机会自己响。</p>
@@ -268,7 +270,10 @@
 <li>唯一的网络请求是打开页面本身（GitHub Pages 托管）。</li>
 <li>不需要你的教务系统账号密码，也请不要把密码给任何第三方工具。</li>
 </ul>
+<hr>
+<p><sub>课表转日历 · 作者 Bryce · 2026 年冬</sub></p>
   </div>
+  <p class="credit">作者：<strong>Bryce</strong> · <a href="./">课表转日历</a></p>
 </main>
 </body>
 </html>
